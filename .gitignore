@@ -1,0 +1,5 @@
+datasets/vectorized/*.json
+
+word2vec/*.kv
+
+notebooks/.ipynb_checkpoints/
