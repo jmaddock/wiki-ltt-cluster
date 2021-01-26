@@ -43,10 +43,20 @@ class CleanAndVectorize(object):
 
         return w2v
 
-    def process_dump(self, filepath, save_text=False, save_tokens=False, debug=False):
+    def get_dumps_from_dir(self,indir):
+        file_list = [f for f in os.listdir(indir)
+                     if f.find('enwiki-latest-pages-articles') >= 0
+                     and f.find('multistream') < 0
+                     and f.find('rss') < 0
+                     and f.find('enwiki-latest-pages-articles.xml.bz2') < 0]
 
+        return file_list
+
+    def get_dumps_from_web(self):
+        pass
+
+    def process_dump(self, filepath, save_text=False, save_tokens=False, debug=False):
         with bz2.open(filepath) as filestream:
-            observation_list = []
             dump = mwxml.Dump.from_file(filestream)
             for i, page in enumerate(dump):
                 for rev in page:
@@ -71,14 +81,12 @@ class CleanAndVectorize(object):
                     if save_tokens:
                         observation['tokenized_text'] = tokenized_text
 
-                    observation_list.append(observation)
+                    yield observation
 
                 if debug:
 
                     if i == debug:
                         break
-
-        return observation_list
 
 def main():
     parser = argparse.ArgumentParser(description='Convert .bz2 compressed xml dumps of Wikipedia articles to feature vectors.')
@@ -113,19 +121,21 @@ def main():
 
     cv = CleanAndVectorize(args.embedding_file)
 
-    files_to_process = os.listdir(args.indir)
+    files_to_process = cv.get_dumps_from_dir(args.indir)
     for infile in files_to_process:
         infile_path = os.path.join(args.indir,infile)
-
-        page_list = cv.process_dump(infile_path,
-                                    save_text=args.save_text,
-                                    save_tokens=args.save_tokens,
-                                    debug=args.debug)
-
         outfile_name = '{0}.json'.format(infile.split('.')[0])
         outfile_path = os.path.join(args.outdir,outfile_name)
         with open(outfile_path,'w') as outfile:
-            json.dump(page_list,outfile)
+            outfile.write('[')
+            for i, obs in enumerate(cv.process_dump(infile_path,
+                                       save_text=args.save_text,
+                                       save_tokens=args.save_tokens,
+                                       debug=args.debug)):
+                if i > 0:
+                    outfile.write(',')
+                json.dump(obs,outfile)
+            outfile.write(']')
 
 if __name__ == "__main__":
     main()

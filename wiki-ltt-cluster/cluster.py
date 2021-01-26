@@ -96,6 +96,8 @@ def main():
     with open(args.outfile,'w') as outfile:
         outfile.write('[')
         for i, obs in enumerate(observation_list):
+            if i > 0:
+                outfile.write(',')
             json.dump({
                 'title':obs['title'],
                 'page_id':obs['page_id'],
